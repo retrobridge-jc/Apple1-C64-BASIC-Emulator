@@ -1,44 +1,72 @@
-# Build Your Own D64
+# Build Your Own Runnable D64
 
-The public distribution does not include WozMon, Apple Integer BASIC, or a ready-to-run D64 containing them.
+The repository includes a copyright-clean disk image:
 
-## What you need
+`disk/APPLE1V04_CLEAN.D64`
 
-- VICE or another Commodore 64 environment capable of creating/writing D64 disk images
-- `source/APPLE1_V04.PRG` from this repository
-- A separately obtained Apple-1 Woz Monitor image
-- A separately obtained Apple Integer BASIC image
+It contains only John Chirillo's `APPLE1` emulator. WozMon and Apple Integer BASIC are not included.
 
-## Prepare the disk
+## 1. Obtain the required Apple-1 software
 
-1. Create a new writable Commodore 1541 D64 image.
-2. Add `source/APPLE1_V04.PRG` to the disk and store it under the Commodore filename `APPLE1`.
-3. Add your separately obtained Woz Monitor file and name it `WOZMON`.
-4. Add your separately obtained Apple Integer BASIC file and name it `A1BASIC`.
-5. Attach the completed disk image to Drive 8.
+Obtain WozMon and Apple Integer BASIC separately from a source you are authorized to use.
 
-The emulator expects `WOZMON` and `A1BASIC` on device 8.
+The emulator expects:
 
-## Start the emulator
+```text
+WOZMON
+A1BASIC
+```
 
-From the Commodore 64 prompt:
+on Commodore device 8.
+
+## 2. Prepare the files for the V0.4 loader
+
+V0.4 uses C64 KERNAL `LOAD` with secondary address 1. Therefore the files placed on the Commodore disk must contain the two-byte C64 PRG load-address header.
+
+- WozMon: 256-byte raw payload + `00 C0` header
+- Integer BASIC: 4096-byte raw payload + `00 90` header
+
+Use the included utility:
+
+```sh
+python3 tools/prepare_apple1_files.py \
+  --wozmon /path/to/wozmon.bin \
+  --integer-basic /path/to/integer-basic.bin \
+  --out-dir prepared
+```
+
+The utility accepts either the raw payload size or an already prepared file with the correct header. It does not contain or download any Apple software.
+
+## 3. Add the prepared files to the clean D64
+
+With VICE's `c1541` utility:
+
+```sh
+c1541 disk/APPLE1V04_CLEAN.D64 \
+  -write prepared/WOZMON WOZMON \
+  -write prepared/A1BASIC A1BASIC
+```
+
+You can also use a compatible D64 image editor.
+
+## 4. Start the emulator
+
+Attach the completed disk image to Drive 8.
+
+At the C64 prompt:
 
 ```basic
 LOAD"APPLE1",8
 RUN
 ```
 
-The emulator uses C64 KERNAL loading routines to place the external images in their C64 backing-memory locations. The Apple-1 machine code itself is then interpreted by the virtual 6502 implemented in Commodore BASIC.
-
-Once WozMon is running, enter:
+Once WozMon is running:
 
 ```text
 E000R
 ```
 
-That jumps to Apple Integer BASIC at Apple-1 address `$E000`.
-
-A simple first test is:
+Then test Integer BASIC:
 
 ```text
 PRINT 2+2
@@ -50,7 +78,7 @@ Expected result:
 4
 ```
 
-## Expected memory locations
+## Memory locations
 
 | Component | C64 backing memory | Apple-1 address |
 |---|---:|---:|
@@ -61,6 +89,11 @@ Expected result:
 
 ## Troubleshooting
 
-If the loader cannot find `WOZMON` or `A1BASIC`, verify that the filenames are exact and that the files are on device 8.
+If the loader reports an error, verify:
 
-During development, VICE Warp Mode can make testing much more practical. Warp Mode speeds up the C64 host environment; it does not bypass the BASIC virtual 6502.
+1. The filenames are exactly `WOZMON` and `A1BASIC`.
+2. Both files are on device 8.
+3. WozMon is 258 bytes after preparation and begins with `00 C0`.
+4. Integer BASIC is 4098 bytes after preparation and begins with `00 90`.
+
+VICE Warp Mode can make development and testing much more practical. It speeds up the C64 host environment; it does not bypass the BASIC virtual 6502.
