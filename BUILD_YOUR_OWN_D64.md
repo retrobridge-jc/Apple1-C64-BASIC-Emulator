@@ -1,10 +1,12 @@
 # Build Your Own Runnable D64
 
-The repository includes a copyright-clean disk image:
+The repository includes a deterministic clean-D64 generator. Create the disk image with:
 
-`disk/APPLE1V04_CLEAN.D64`
+```sh
+python3 tools/make_clean_d64.py
+```
 
-It contains only John Chirillo's `APPLE1` emulator. WozMon and Apple Integer BASIC are not included.
+This produces `disk/APPLE1V04_CLEAN.D64`, containing only John Chirillo's `APPLE1` emulator. WozMon and Apple Integer BASIC are not included.
 
 ## 1. Obtain the required Apple-1 software
 
@@ -37,9 +39,15 @@ python3 tools/prepare_apple1_files.py \
 
 The utility accepts either the raw payload size or an already prepared file with the correct header. It does not contain or download any Apple software.
 
-## 3. Add the prepared files to the clean D64
+## 3. Create the clean D64 and add the prepared files
 
-With VICE's `c1541` utility:
+First run:
+
+```sh
+python3 tools/make_clean_d64.py
+```
+
+Then, with VICE's `c1541` utility:
 
 ```sh
 c1541 disk/APPLE1V04_CLEAN.D64 \
