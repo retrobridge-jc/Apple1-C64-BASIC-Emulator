@@ -32,7 +32,7 @@ The repository includes:
 
 - `source/APPLE1_V04.BAS` - complete BASIC source
 - `source/APPLE1_V04.PRG` - regenerated V0.4 loadable program
-- `disk/APPLE1V04_CLEAN.D64` - copyright-clean disk image containing only `APPLE1`
+- `tools/make_clean_d64.py` - creates a copyright-clean D64 containing only `APPLE1`
 - `tools/prepare_apple1_files.py` - prepares user-supplied Apple-1 images for the V0.4 KERNAL loader
 
 WozMon and Apple Integer BASIC are **not distributed** here.
@@ -72,7 +72,11 @@ python3 tools/prepare_apple1_files.py \
 
 ## Build a runnable disk
 
-Start with `disk/APPLE1V04_CLEAN.D64`, then add the prepared `WOZMON` and `A1BASIC` files.
+Create the clean D64 from the included PRG, then add the prepared `WOZMON` and `A1BASIC` files:
+
+```sh
+python3 tools/make_clean_d64.py
+```
 
 With VICE's `c1541` utility:
 
