@@ -1,26 +1,28 @@
 # Source Files
 
-`APPLE1_V04.BAS` is the complete plain-text Commodore 64 BASIC V2 source for version 0.4 of the Apple-1 emulator.
+`APPLE1_V04.BAS` is the complete plain-text Commodore 64 BASIC V2 source for version 0.4.
+
+`APPLE1_V04.PRG` is the regenerated tokenized/loadable form of that source.
 
 The public repository intentionally does not include WozMon or Apple Integer BASIC.
 
-## Building a PRG
+## Rebuilding the PRG
 
-With VICE's `petcat` utility installed, run:
+With VICE's `petcat` utility installed, from the repository root run:
 
 ```sh
-../tools/make-prg.sh
+sh tools/make-prg.sh
 ```
 
-from this directory, or run the script from the repository root.
+The resulting `APPLE1_V04.PRG` can be placed on a D64 under the Commodore filename `APPLE1`.
 
-The script creates `APPLE1_V04.PRG`. When copying that program to a D64 for use with the emulator, store it under the Commodore filename `APPLE1`.
+## Preparing the required third-party files
 
-## Expected companion filenames
-
-The emulator's loader expects these separately obtained files on device 8:
+The emulator expects separately obtained files named:
 
 ```text
 WOZMON
 A1BASIC
 ```
+
+Use `tools/prepare_apple1_files.py` to validate or add the C64 PRG load-address headers required by V0.4.
