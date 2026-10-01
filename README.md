@@ -26,84 +26,76 @@ I collect and use vintage computers, including a working Apple-1 and Commodore 6
 
 Version 0.4 is the result.
 
-## Repository layout
+## Quick start
 
-```text
-Apple1-C64-BASIC-Emulator/
-├── README.md
-├── LICENSE
-├── CHANGELOG.md
-├── CONTRIBUTING.md
-├── THIRD_PARTY_SOFTWARE.md
-├── BUILD_YOUR_OWN_D64.md
-├── source/
-│   ├── APPLE1_V04.BAS
-│   └── README.md
-├── docs/
-│   ├── ARCHITECTURE.md
-│   ├── MEMORY_MAP.md
-│   └── TESTING.md
-└── tools/
-    └── make-prg.sh
-```
+The repository includes:
+
+- `source/APPLE1_V04.BAS` - complete BASIC source
+- `source/APPLE1_V04.PRG` - regenerated V0.4 loadable program
+- `disk/APPLE1V04_CLEAN.D64` - copyright-clean disk image containing only `APPLE1`
+- `tools/prepare_apple1_files.py` - prepares user-supplied Apple-1 images for the V0.4 KERNAL loader
+
+WozMon and Apple Integer BASIC are **not distributed** here.
+
+See [BUILD_YOUR_OWN_D64.md](BUILD_YOUR_OWN_D64.md) for the full reproduction procedure.
 
 ## Required Apple-1 software
 
-This repository **does not distribute** the original Apple-1 Monitor (WozMon) or Apple Integer BASIC.
+Obtain WozMon and Apple Integer BASIC separately from a source you are authorized to use.
 
-To run the emulator, obtain those components separately from a source you are authorized to use. Useful historical/reference resources include:
-
-- Apple-1 Registry software resources: https://www.apple1registry.com/en/soft.html
-- SB-Projects Woz Monitor information: https://www.sbprojects.net/projects/apple1/wozmon.php
-- Apple-1 Software Library: https://apple1software.com/
-- Apple1js reference project: https://www.scullinsteel.com/apple1/
-
-The emulator expects these filenames on Commodore device 8:
+The V0.4 loader expects these exact Commodore filenames on device 8:
 
 ```text
 WOZMON
 A1BASIC
 ```
 
-Those third-party components are not covered by this repository's MIT License.
+### Important: C64 PRG load-address headers
 
-## Memory mapping
+V0.4 calls the C64 KERNAL `LOAD` routine with secondary address 1, so the files on the Commodore disk must carry a two-byte C64 PRG load-address header:
 
-| Apple-1 address | Function | C64 backing/action |
-|---|---|---|
-| `$0000-$1FFF` | Low RAM | `$7000-$8FFF` |
-| `$D010-$D013` | PIA I/O | Intercepted/emulated |
-| `$E000-$EFFF` | Integer BASIC | `$9000-$9FFF` |
-| `$FF00-$FFFF` | Woz Monitor | `$C000-$C0FF` |
+| File | Raw Apple-1 payload | Required C64 load header | C64 backing address | Apple-1 address |
+|---|---:|---:|---:|---:|
+| `WOZMON` | 256 bytes | `00 C0` | `$C000` | `$FF00-$FFFF` |
+| `A1BASIC` | 4096 bytes | `00 90` | `$9000` | `$E000-$EFFF` |
 
-See [docs/MEMORY_MAP.md](docs/MEMORY_MAP.md) for details.
+Merely renaming a raw binary is not sufficient. The included `tools/prepare_apple1_files.py` utility validates an already prepared file or adds the required header to a user-supplied raw image. It does not contain or download Apple software.
 
-## Building a runnable disk
+Example:
 
-See [BUILD_YOUR_OWN_D64.md](BUILD_YOUR_OWN_D64.md).
+```sh
+python3 tools/prepare_apple1_files.py \
+  --wozmon /path/to/wozmon.bin \
+  --integer-basic /path/to/integer-basic.bin \
+  --out-dir prepared
+```
 
-At a high level:
+## Build a runnable disk
 
-1. Create or attach a writable Commodore 1541 D64 image.
-2. Convert or load `source/APPLE1_V04.BAS` as the Commodore program `APPLE1`.
-3. Add your separately obtained Woz Monitor image as `WOZMON`.
-4. Add your separately obtained Apple Integer BASIC image as `A1BASIC`.
-5. Attach the disk to Drive 8 in VICE.
+Start with `disk/APPLE1V04_CLEAN.D64`, then add the prepared `WOZMON` and `A1BASIC` files.
 
-Then run:
+With VICE's `c1541` utility:
+
+```sh
+c1541 disk/APPLE1V04_CLEAN.D64 \
+  -write prepared/WOZMON WOZMON \
+  -write prepared/A1BASIC A1BASIC
+```
+
+Attach the completed disk as Drive 8 and run:
 
 ```basic
 LOAD"APPLE1",8
 RUN
 ```
 
-Once WozMon is running, enter:
+At the Woz Monitor prompt:
 
 ```text
 E000R
 ```
 
-A simple first test in Integer BASIC is:
+Then in Integer BASIC:
 
 ```text
 PRINT 2+2
@@ -115,27 +107,49 @@ Expected result:
 4
 ```
 
-## Creating a PRG from the BASIC source
+## Memory mapping
 
-If VICE's `petcat` utility is installed, the included helper can tokenize the plain-text BASIC source:
+| Apple-1 address | Function | C64 backing/action |
+|---|---|---|
+| `$0000-$1FFF` | Low RAM | `$7000-$8FFF` |
+| `$D010-$D013` | PIA I/O | Intercepted/emulated |
+| `$E000-$EFFF` | Integer BASIC | `$9000-$9FFF` |
+| `$FF00-$FFFF` | Woz Monitor | `$C000-$C0FF` |
+
+See [docs/MEMORY_MAP.md](docs/MEMORY_MAP.md).
+
+## Rebuilding the PRG from source
+
+If VICE's `petcat` utility is installed:
 
 ```sh
-./tools/make-prg.sh
+sh tools/make-prg.sh
 ```
 
-The resulting `APPLE1_V04.PRG` can then be placed on a D64 under the Commodore filename `APPLE1`.
+The script regenerates `source/APPLE1_V04.PRG` from the plain-text BASIC source.
 
 ## Performance
 
-The emulator is intentionally BASIC-first rather than speed-first. At normal C64 speed, execution is slow because Commodore BASIC is simulating each virtual 6502 instruction.
+The emulator is intentionally BASIC-first rather than speed-first. At normal C64 speed, Commodore BASIC is simulating each virtual 6502 instruction, so pauses are noticeable.
 
-VICE Warp Mode is useful during development and testing. It does not bypass the virtual 6502; it simply allows the emulated Commodore 64 underneath it to run faster.
+VICE Warp Mode is useful during development and testing. It accelerates the emulated Commodore 64 but does not bypass or change the virtual 6502 implementation.
 
 ## Machine-language assistance
 
 The virtual Apple-1 CPU is implemented in Commodore BASIC.
 
-Version 0.4 installs a small loader at `$6800` that calls the C64 KERNAL `SETNAM` (`$FFBD`), `SETLFS` (`$FFBA`), and `LOAD` (`$FFD5`) routines to place externally supplied Apple-1 images into their C64 backing-memory locations efficiently. The loader does not execute Apple-1 code; the BASIC emulator still fetches and interprets the Apple-1 instructions.
+Version 0.4 installs a small loader at `$6800` that calls C64 KERNAL `SETNAM` (`$FFBD`), `SETLFS` (`$FFBA`), and `LOAD` (`$FFD5`). The loader only places the external Apple-1 images into C64 backing memory. The Apple-1 machine code is still fetched and interpreted instruction-by-instruction by the BASIC emulator.
+
+## Third-party software
+
+This repository intentionally does not distribute WozMon or Apple Integer BASIC. See [THIRD_PARTY_SOFTWARE.md](THIRD_PARTY_SOFTWARE.md).
+
+Useful historical/reference resources include:
+
+- https://www.apple1registry.com/en/soft.html
+- https://www.sbprojects.net/projects/apple1/wozmon.php
+- https://apple1software.com/
+- https://www.scullinsteel.com/apple1/
 
 ## COMPUTE!'s Gazette
 
@@ -149,12 +163,10 @@ The article was prepared for *COMPUTE!'s Gazette*. Publication details will be a
 
 Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Please do **not** submit WozMon, Apple Integer BASIC, or other third-party binaries to this repository.
+Please do not submit WozMon, Apple Integer BASIC, or other third-party binaries to this repository.
 
 ## License
 
-The emulator source and original project documentation in this repository are released under the MIT License.
-
-Third-party Apple-1 software is **not included** and is **not covered** by the MIT License.
+The emulator source and original project documentation are released under the MIT License. Third-party Apple-1 software is not included and is not covered by that license.
 
 Copyright © 2026 John Chirillo
